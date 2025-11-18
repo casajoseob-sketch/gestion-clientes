@@ -21,20 +21,34 @@ export default function ModalReserva({ datos, onClose, onSave }) {
 
   async function cargarMesasDisponibles() {
     try {
+      console.log('🔍 Cargando mesas disponibles para:', {
+        fecha: datos.fecha,
+        turno: datos.turno,
+        hora: datos.hora,
+        mesaActual: datos.mesa
+      });
+
       const todasReservas = await reservasAPI.getAll({
         fecha: datos.fecha,
         turno: datos.turno
       });
+
+      console.log('📊 Reservas encontradas:', todasReservas);
 
       const mesasOcupadas = new Set();
       todasReservas.forEach(r => {
         if (r.hora === datos.hora) {
           mesasOcupadas.add(r.mesa);
           if (r.mesas_combinadas) {
-            JSON.parse(r.mesas_combinadas).forEach(m => mesasOcupadas.add(m));
+            const mesas = typeof r.mesas_combinadas === 'string'
+              ? JSON.parse(r.mesas_combinadas)
+              : r.mesas_combinadas;
+            mesas.forEach(m => mesasOcupadas.add(m));
           }
         }
       });
+
+      console.log('🚫 Mesas ocupadas en este horario:', Array.from(mesasOcupadas));
 
       const disponibles = [];
       for (let i = 1; i <= MESAS_TOTALES; i++) {
@@ -44,9 +58,19 @@ export default function ModalReserva({ datos, onClose, onSave }) {
         }
       }
 
+      console.log('✅ Mesas disponibles para combinar:', disponibles);
       setMesasDisponibles(disponibles);
     } catch (error) {
-      console.error('Error al cargar mesas:', error);
+      console.error('❌ Error al cargar mesas:', error);
+      // En caso de error, mostrar todas las mesas excepto la actual
+      const todasMesas = [];
+      for (let i = 1; i <= MESAS_TOTALES; i++) {
+        const mesa = `M${i}`;
+        if (mesa !== datos.mesa) {
+          todasMesas.push(mesa);
+        }
+      }
+      setMesasDisponibles(todasMesas);
     }
   }
 
