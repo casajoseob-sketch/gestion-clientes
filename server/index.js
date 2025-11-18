@@ -49,11 +49,14 @@ app.use('/api/*', (req, res) => {
   res.status(404).json({ error: 'Ruta de API no encontrada' });
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
-  console.log(`📊 API disponible en http://localhost:${PORT}/api`);
-  console.log(`🌐 Frontend disponible en http://localhost:${PORT}\n`);
-});
+// Iniciar servidor solo en desarrollo (no en Vercel)
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`📊 API disponible en http://localhost:${PORT}/api`);
+    console.log(`🌐 Frontend disponible en http://localhost:${PORT}\n`);
+  });
+}
 
+// Exportar app para Vercel
 module.exports = app;
