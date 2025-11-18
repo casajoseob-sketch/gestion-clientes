@@ -9,7 +9,6 @@ export default function ModalReserva({ datos, onClose, onSave }) {
     telefono: '',
     pax: '',
     notas: '',
-    combinarMesas: false,
     mesasAdicionales: []
   });
   const [loading, setLoading] = useState(false);
@@ -17,10 +16,8 @@ export default function ModalReserva({ datos, onClose, onSave }) {
   const [mesasDisponibles, setMesasDisponibles] = useState([]);
 
   useEffect(() => {
-    if (formData.combinarMesas) {
-      cargarMesasDisponibles();
-    }
-  }, [formData.combinarMesas]);
+    cargarMesasDisponibles();
+  }, []);
 
   async function cargarMesasDisponibles() {
     try {
@@ -54,10 +51,10 @@ export default function ModalReserva({ datos, onClose, onSave }) {
   }
 
   function handleChange(e) {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: value
     }));
   }
 
@@ -87,11 +84,7 @@ export default function ModalReserva({ datos, onClose, onSave }) {
     let mesasCombinadas = null;
     let capacidadTotal = capacidadPrincipal;
 
-    if (formData.combinarMesas) {
-      if (formData.mesasAdicionales.length === 0) {
-        setError('Debe seleccionar al menos una mesa adicional');
-        return;
-      }
+    if (formData.mesasAdicionales.length > 0) {
       mesasCombinadas = [datos.mesa, ...formData.mesasAdicionales];
       capacidadTotal = calcularCapacidadTotal(mesasCombinadas);
     }
@@ -206,85 +199,89 @@ export default function ModalReserva({ datos, onClose, onSave }) {
             />
           </div>
 
-          {/* Combinar Mesas */}
-          <div className="mb-4 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-            <label className="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="checkbox"
-                name="combinarMesas"
-                checked={formData.combinarMesas}
-                onChange={handleChange}
-                className="w-5 h-5 cursor-pointer"
-              />
-              <div>
-                <span className="font-semibold text-lg">🔗 Combinar con otras mesas</span>
-                <p className="text-sm text-gray-600 mt-1">
-                  Selecciona qué mesas quieres juntar para grupos grandes
-                </p>
+          {/* Combinar Mesas - SIEMPRE VISIBLE */}
+          <div className="mb-4 p-5 bg-gradient-to-br from-orange-50 to-yellow-50 rounded-lg border-3 border-orange-400 shadow-md">
+            <div className="mb-4">
+              <h3 className="font-bold text-xl mb-2 text-gray-900 flex items-center">
+                <span className="text-3xl mr-2">🪑</span>
+                ¿Necesitas combinar con otra mesa?
+              </h3>
+              <p className="text-sm text-gray-700">
+                <strong className="text-orange-600">Mesa seleccionada: {datos.mesa}</strong> (capacidad: {obtenerCapacidadMesa(datos.mesa)} personas)
+              </p>
+            </div>
+
+            {mesasDisponibles.length === 0 ? (
+              <div className="text-center py-6 bg-white rounded-lg border-2 border-gray-200">
+                <p className="text-gray-500 text-lg">⚠️ No hay otras mesas disponibles</p>
+                <p className="text-sm text-gray-400 mt-1">en este horario para combinar</p>
               </div>
-            </label>
-          </div>
-
-          {/* Mesas Adicionales */}
-          {formData.combinarMesas && (
-            <div className="mb-4 p-5 bg-gradient-to-br from-orange-50 to-yellow-50 rounded-lg border-2 border-orange-200">
-              <label className="block font-bold text-lg mb-3 text-gray-800">
-                🪑 Selecciona las mesas a combinar
-              </label>
-
-              {mesasDisponibles.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">
-                  ⚠️ No hay mesas disponibles para combinar en este horario
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Click en las mesas que quieres juntar con <strong>{datos.mesa}</strong>:
+            ) : (
+              <>
+                <div className="bg-white p-4 rounded-lg border-2 border-orange-300 mb-4">
+                  <p className="font-semibold text-gray-800 mb-2 text-base">
+                    👉 Haz CLICK en las mesas que quieres JUNTAR con {datos.mesa}:
                   </p>
+                  <p className="text-xs text-gray-600">
+                    (Puedes seleccionar varias. Las mesas naranjas están seleccionadas)
+                  </p>
+                </div>
 
-                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2 mb-4">
-                    {mesasDisponibles.map(mesa => {
-                      const capacidad = obtenerCapacidadMesa(mesa);
-                      const seleccionada = formData.mesasAdicionales.includes(mesa);
+                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3 mb-4">
+                  {mesasDisponibles.map(mesa => {
+                    const capacidad = obtenerCapacidadMesa(mesa);
+                    const seleccionada = formData.mesasAdicionales.includes(mesa);
 
-                      return (
-                        <button
-                          key={mesa}
-                          type="button"
-                          onClick={() => toggleMesaAdicional(mesa)}
-                          className={`p-3 rounded-lg border-2 transition-all font-semibold text-center ${
-                            seleccionada
-                              ? 'bg-orange-500 text-white border-orange-600 shadow-lg scale-105'
-                              : 'bg-white border-gray-300 hover:border-orange-400 hover:shadow-md'
-                          }`}
-                        >
-                          <div className="text-base">{mesa}</div>
-                          <div className="text-xs opacity-75">{capacidad}p</div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                    return (
+                      <button
+                        key={mesa}
+                        type="button"
+                        onClick={() => toggleMesaAdicional(mesa)}
+                        className={`p-4 rounded-xl border-3 transition-all font-bold text-center shadow-md hover:shadow-xl ${
+                          seleccionada
+                            ? 'bg-orange-500 text-white border-orange-700 shadow-lg scale-110 ring-4 ring-orange-200'
+                            : 'bg-white border-gray-300 hover:border-orange-400 hover:scale-105'
+                        }`}
+                      >
+                        <div className="text-lg font-black">{mesa}</div>
+                        <div className="text-sm mt-1 opacity-90">{capacidad} pers.</div>
+                      </button>
+                    );
+                  })}
+                </div>
 
-                  {formData.mesasAdicionales.length > 0 && (
-                    <div className="bg-white p-4 rounded-lg border-2 border-green-300 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-green-700 text-lg">
-                            ✅ Mesas combinadas: {datos.mesa} + {formData.mesasAdicionales.join(' + ')}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Capacidad total: <strong className="text-green-600 text-lg">
-                              {calcularCapacidadTotal([datos.mesa, ...formData.mesasAdicionales])} personas
-                            </strong>
-                          </p>
-                        </div>
+                {formData.mesasAdicionales.length > 0 ? (
+                  <div className="bg-green-50 p-5 rounded-lg border-3 border-green-400 shadow-lg">
+                    <div className="text-center">
+                      <div className="text-2xl mb-2">✅</div>
+                      <p className="font-black text-green-800 text-xl mb-2">
+                        MESAS COMBINADAS
+                      </p>
+                      <p className="font-bold text-gray-700 text-lg mb-3">
+                        {datos.mesa} + {formData.mesasAdicionales.join(' + ')}
+                      </p>
+                      <div className="bg-white p-3 rounded-lg inline-block">
+                        <p className="text-sm text-gray-600">Capacidad Total:</p>
+                        <p className="text-3xl font-black text-green-600">
+                          {calcularCapacidadTotal([datos.mesa, ...formData.mesasAdicionales])}
+                        </p>
+                        <p className="text-sm text-gray-600">personas</p>
                       </div>
                     </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+                  </div>
+                ) : (
+                  <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200 text-center">
+                    <p className="text-gray-600 text-sm">
+                      💡 <strong>No has seleccionado ninguna mesa adicional</strong>
+                    </p>
+                    <p className="text-gray-500 text-xs mt-1">
+                      Si no necesitas combinar, simplemente continúa con la reserva
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
           {/* Notas */}
           <div className="mb-6">
