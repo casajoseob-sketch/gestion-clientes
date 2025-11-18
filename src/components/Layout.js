@@ -31,7 +31,11 @@ export default function Layout({ children }) {
         <div className="container mx-auto px-4">
           <div className="flex justify-center space-x-1">
             {tabs.map((tab) => (
-              <Link key={tab.path} href={tab.path}>
+              <Link
+                key={tab.path}
+                href={tab.path}
+                prefetch={true}
+              >
                 <button
                   className={`tab ${isActive(tab.path) ? 'tab-active' : ''}`}
                 >
