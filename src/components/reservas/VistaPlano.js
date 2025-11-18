@@ -45,12 +45,23 @@ export default function VistaPlano() {
       return false;
     });
 
-    if (!reserva) return { estado: 'disponible', reserva: null };
+    if (!reserva) return { estado: 'disponible', reserva: null, mesasCombinadas: null };
 
-    const esCombinada = reserva.mesa !== mesa;
+    const esMesaPrincipal = reserva.mesa === mesa;
+    const tieneCombinacion = reserva.mesas_combinadas && reserva.mesas_combinadas.length > 1;
+
+    let mesasCombinadas = null;
+    if (tieneCombinacion) {
+      mesasCombinadas = typeof reserva.mesas_combinadas === 'string'
+        ? JSON.parse(reserva.mesas_combinadas)
+        : reserva.mesas_combinadas;
+    }
+
     return {
-      estado: esCombinada ? 'combinada' : 'reservada',
-      reserva
+      estado: !esMesaPrincipal && tieneCombinacion ? 'combinada' : 'reservada',
+      reserva,
+      mesasCombinadas,
+      esMesaPrincipal
     };
   }
 
@@ -123,7 +134,7 @@ export default function VistaPlano() {
           }}
         >
           {posiciones.map((pos) => {
-            const { estado, reserva } = obtenerEstadoMesa(pos.mesa);
+            const { estado, reserva, mesasCombinadas, esMesaPrincipal } = obtenerEstadoMesa(pos.mesa);
 
             const esRectangular = pos.tipo === 'rectangular';
             const width = esRectangular ? 100 : 80;
@@ -131,8 +142,8 @@ export default function VistaPlano() {
 
             const claseEstado = {
               disponible: 'bg-green-100 border-green-500 hover:bg-green-200',
-              reservada: 'bg-red-100 border-red-500',
-              combinada: 'bg-green-100 border-green-500 border-dashed'
+              reservada: mesasCombinadas ? 'bg-orange-100 border-orange-500' : 'bg-red-100 border-red-500',
+              combinada: 'bg-yellow-100 border-yellow-500 border-dashed'
             }[estado];
 
             return (
@@ -153,11 +164,30 @@ export default function VistaPlano() {
                 }}
               >
                 <div className="text-center text-sm">
-                  <div className="font-bold">{pos.mesa}</div>
-                  {reserva && (
-                    <div className="text-xs mt-1">
-                      {reserva.nombre_cliente.split(' ')[0]}
-                    </div>
+                  {/* Mesa principal con combinación */}
+                  {esMesaPrincipal && mesasCombinadas ? (
+                    <>
+                      <div className="font-bold text-xs">{mesasCombinadas.join('+')}</div>
+                      <div className="text-xs mt-1">
+                        {reserva.nombre_cliente.split(' ')[0]}
+                      </div>
+                    </>
+                  ) : estado === 'combinada' && reserva ? (
+                    /* Mesa secundaria combinada */
+                    <>
+                      <div className="font-bold">{pos.mesa}</div>
+                      <div className="text-xs mt-1">→ {reserva.mesa}</div>
+                    </>
+                  ) : (
+                    /* Mesa normal */
+                    <>
+                      <div className="font-bold">{pos.mesa}</div>
+                      {reserva && (
+                        <div className="text-xs mt-1">
+                          {reserva.nombre_cliente.split(' ')[0]}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -177,8 +207,12 @@ export default function VistaPlano() {
           <span>Reservada</span>
         </div>
         <div className="flex items-center">
-          <div className="w-6 h-6 bg-green-100 border-2 border-green-500 border-dashed rounded mr-2"></div>
-          <span>Combinada</span>
+          <div className="w-6 h-6 bg-orange-100 border-2 border-orange-500 rounded mr-2"></div>
+          <span>Combinada (Principal)</span>
+        </div>
+        <div className="flex items-center">
+          <div className="w-6 h-6 bg-yellow-100 border-2 border-yellow-500 border-dashed rounded mr-2"></div>
+          <span>Combinada (Secundaria)</span>
         </div>
       </div>
 

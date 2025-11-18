@@ -59,16 +59,34 @@ export default function VistaCuadricula() {
     const reserva = obtenerReserva(turno, hora, mesa);
 
     if (reserva) {
-      const esCombinada = reserva.mesa !== mesa;
+      const esMesaPrincipal = reserva.mesa === mesa;
       const nombreCorto = reserva.nombre_cliente.split(' ')[0];
+
+      // Obtener mesas combinadas si existen
+      let mesasCombinadas = null;
+      if (reserva.mesas_combinadas && reserva.mesas_combinadas.length > 1) {
+        mesasCombinadas = typeof reserva.mesas_combinadas === 'string'
+          ? JSON.parse(reserva.mesas_combinadas)
+          : reserva.mesas_combinadas;
+      }
 
       return (
         <td
           key={mesa}
-          className={esCombinada ? 'grid-cell-combinada' : 'grid-cell-reservada'}
+          className={!esMesaPrincipal ? 'grid-cell-combinada' : 'grid-cell-reservada'}
           onClick={() => abrirModalInfo(reserva)}
+          title={mesasCombinadas ? `Mesas combinadas: ${mesasCombinadas.join(' + ')}` : ''}
         >
-          {nombreCorto}
+          {esMesaPrincipal && mesasCombinadas ? (
+            <div className="text-xs font-semibold">
+              <div>{mesasCombinadas.join('+')}</div>
+              <div className="text-xs">{nombreCorto}</div>
+            </div>
+          ) : !esMesaPrincipal ? (
+            <div className="text-xs">→ {reserva.mesa}</div>
+          ) : (
+            nombreCorto
+          )}
         </td>
       );
     }

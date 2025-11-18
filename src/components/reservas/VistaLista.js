@@ -222,8 +222,8 @@ export default function VistaLista() {
                       : reserva.mesas_combinadas)
                   : null;
 
-                const mesasTexto = mesasCombinadas
-                  ? mesasCombinadas.join(', ')
+                const mesasTexto = mesasCombinadas && mesasCombinadas.length > 1
+                  ? mesasCombinadas.join(' + ')
                   : reserva.mesa;
 
                 const estadoInfo = obtenerEstadoConColor(reserva.estado);
