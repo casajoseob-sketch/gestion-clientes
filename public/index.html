@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Reservas - Casa José</title>
+    <style>
+        /* ===== ESTILOS GENERALES ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', Arial, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding-bottom: 20px;
+        }
+
+        :root {
+            --primary: #0fb9b1;
+            --secondary: #c19031;
+            --accent: #e74c3c;
+            --warning: #f39c12;
+            --success: #2ecc71;
+            --gray: #95a5a6;
+            --light-gray: #ecf0f1;
+            --dark: #2c3e50;
+        }
+
+        /* ===== HEADER ===== */
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, #0a9d96 100%);
+            color: white;
+            padding: 25px 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        header h1 {
+            font-size: 2em;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* ===== NAVEGACIÓN DE PESTAÑAS ===== */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            max-width: 1400px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px 30px;
+            background: white;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--dark);
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-button:hover {
+            background: var(--light-gray);
+        }
+
+        .tab-button.active {
+            background: var(--primary);
+            color: white;
+            border-bottom: 3px solid var(--secondary);
+        }
+
+        /* ===== CONTENEDOR PRINCIPAL ===== */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* ===== CONTROLES DE FECHA ===== */
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .controls label {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .controls input,
+        .controls select {
+            padding: 10px 15px;
+            border: 2px solid var(--light-gray);
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border 0.3s ease;
+        }
+
+        .controls input:focus,
+        .controls select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* ===== BOTONES ===== */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        /* ===== VISTA CUADRÍCULA ===== */
+        .grid-wrapper {
+            overflow-x: auto;
+        }
+
+        .grid-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+        }
+
+        .grid-table th,
+        .grid-table td {
+            border: 2px solid #ddd;
+            padding: 12px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .grid-table th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .grid-table .time-header {
+            background: var(--secondary);
+            font-weight: 600;
+            color: white;
+            min-width: 80px;
+        }
+
+        .grid-table .comida-row {
+            background: #e3f2fd;
+        }
+
+        .grid-table .cena-row {
+            background: #fff9e6;
+        }
+
+        .grid-table .cell-disponible {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .grid-table .cell-disponible:hover {
+            background: var(--primary) !important;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .grid-table .cell-reservada {
+            background: #ffebee !important;
+            color: var(--accent);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .grid-table .cell-combinada {
+            background: #e8f5e9 !important;
+            border: 3px dashed var(--success) !important;
+            color: var(--success);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* ===== VISTA LISTA ===== */
+        .lista-table-wrapper {
+            overflow-x: auto;
+        }
+
+        .lista-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 900px;
+        }
+
+        .lista-table th,
+        .lista-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .lista-table th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        .lista-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .lista-table tr:hover {
+            background: #e3f2fd;
+        }
+
+        /* ===== MODAL ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light-gray);
+        }
+
+        .modal-header h2 {
+            color: var(--primary);
+            font-size: 1.5em;
+        }
+
+        .modal-close {
+            background: var(--accent);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid var(--light-gray);
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        /* ===== LOADING ===== */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray);
+        }
+
+        .spinner {
+            border: 4px solid var(--light-gray);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 3000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--accent); }
+        .toast-warning { background: var(--warning); }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* ===== INFO BOX ===== */
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .info-box h3 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .info-box p {
+            margin: 5px 0;
+            color: var(--dark);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.5em;
+            }
+
+            .tab-button {
+                padding: 10px 15px;
+                font-size: 0.9em;
+            }
+
+            .container {
+                padding: 10px;
+            }
+
+            .tab-content {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <header>
+        <h1>🍽️ Sistema de Reservas - Casa José</h1>
+    </header>
+
+    <!-- NAVEGACIÓN DE PESTAÑAS -->
+    <div class="tabs">
+        <button class="tab-button active" onclick="switchTab('cuadricula')">📊 Vista Cuadrícula</button>
+        <button class="tab-button" onclick="switchTab('lista')">📋 Vista Lista</button>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="container">
+        <!-- ===== VISTA CUADRÍCULA ===== -->
+        <div id="cuadricula" class="tab-content active">
+            <div class="controls">
+                <label>📅 Fecha:</label>
+                <input type="date" id="gridFecha" onchange="renderGrid()">
+                <button class="btn btn-primary" onclick="setHoy()">Hoy</button>
+            </div>
+            <div id="gridLoading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Cargando reservas...</p>
+            </div>
+            <div class="grid-wrapper">
+                <table class="grid-table" id="gridTable"></table>
+            </div>
+        </div>
+
+        <!-- ===== VISTA LISTA ===== -->
+        <div id="lista" class="tab-content">
+            <div class="controls">
+                <input type="text" id="buscarReserva" placeholder="🔍 Buscar por nombre..." oninput="filtrarReservas()" style="flex: 1; min-width: 200px;">
+                <input type="date" id="filtroFecha" onchange="filtrarReservas()">
+            </div>
+
+            <div id="listaLoading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Cargando reservas...</p>
+            </div>
+
+            <div class="lista-table-wrapper">
+                <table class="lista-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Turno</th>
+                            <th>Hora</th>
+                            <th>Mesa(s)</th>
+                            <th>Nombre</th>
+                            <th>Teléfono</th>
+                            <th>PAX</th>
+                            <th>Notas</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaReservasBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL DE RESERVA ===== -->
+    <div id="reservaModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📝 Nueva Reserva</h2>
+                <button class="modal-close" onclick="cerrarModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="reservaForm" onsubmit="guardarReserva(event)">
+                    <input type="hidden" id="reservaFecha">
+                    <input type="hidden" id="reservaTurno">
+                    <input type="hidden" id="reservaHora">
+                    <input type="hidden" id="reservaMesa">
+
+                    <div class="form-group">
+                        <label>Nombre del Cliente *</label>
+                        <input type="text" id="reservaNombre" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Teléfono *</label>
+                        <input type="tel" id="reservaTelefono" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Número de Comensales (PAX) *</label>
+                        <input type="number" id="reservaPax" min="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notas Adicionales</label>
+                        <textarea id="reservaNotas"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="cerrarModal()" type="button">Cancelar</button>
+                <button class="btn btn-primary" onclick="document.getElementById('reservaForm').requestSubmit()">💾 Guardar Reserva</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL DE INFORMACIÓN DE RESERVA ===== -->
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ℹ️ Información de Reserva</h2>
+                <button class="modal-close" onclick="cerrarInfoModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="info-box" id="infoReservaContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="eliminarReservaActual()">🗑️ Eliminar</button>
+                <button class="btn btn-secondary" onclick="cerrarInfoModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="api-client.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
