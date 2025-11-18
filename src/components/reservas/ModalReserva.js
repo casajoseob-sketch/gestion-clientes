@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { reservasAPI, mesasAPI } from '@/lib/api';
 import { obtenerCapacidadMesa, calcularCapacidadTotal } from '@/lib/utils';
 import { MESAS_TOTALES } from '@/lib/constants';
@@ -22,19 +22,10 @@ export default function ModalReserva({ datos, onClose, onSave }) {
 
   async function cargarMesasDisponibles() {
     try {
-      console.log('🔍 Cargando mesas disponibles para:', {
-        fecha: datos.fecha,
-        turno: datos.turno,
-        hora: datos.hora,
-        mesaActual: datos.mesa
-      });
-
       const todasReservas = await reservasAPI.getAll({
         fecha: datos.fecha,
         turno: datos.turno
       });
-
-      console.log('📊 Reservas encontradas:', todasReservas);
 
       const mesasOcupadas = new Set();
       todasReservas.forEach(r => {
@@ -49,8 +40,6 @@ export default function ModalReserva({ datos, onClose, onSave }) {
         }
       });
 
-      console.log('🚫 Mesas ocupadas en este horario:', Array.from(mesasOcupadas));
-
       const disponibles = [];
       for (let i = 1; i <= MESAS_TOTALES; i++) {
         const mesa = `M${i}`;
@@ -59,10 +48,8 @@ export default function ModalReserva({ datos, onClose, onSave }) {
         }
       }
 
-      console.log('✅ Mesas disponibles para combinar:', disponibles);
       setMesasDisponibles(disponibles);
     } catch (error) {
-      console.error('❌ Error al cargar mesas:', error);
       // En caso de error, mostrar todas las mesas excepto la actual
       const todasMesas = [];
       for (let i = 1; i <= MESAS_TOTALES; i++) {
@@ -75,22 +62,27 @@ export default function ModalReserva({ datos, onClose, onSave }) {
     }
   }
 
-  function handleChange(e) {
+  const handleChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
-  }
+  }, []);
 
-  function toggleMesaAdicional(mesa) {
+  const toggleMesaAdicional = useCallback((mesa) => {
     setFormData(prev => {
       const mesasAdicionales = prev.mesasAdicionales.includes(mesa)
         ? prev.mesasAdicionales.filter(m => m !== mesa)
         : [...prev.mesasAdicionales, mesa];
       return { ...prev, mesasAdicionales };
     });
-  }
+  }, []);
+
+  const capacidadMesaPrincipal = useMemo(() =>
+    obtenerCapacidadMesa(datos.mesa),
+    [datos.mesa]
+  );
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -103,7 +95,7 @@ export default function ModalReserva({ datos, onClose, onSave }) {
     }
 
     const pax = parseInt(formData.pax);
-    const capacidadPrincipal = obtenerCapacidadMesa(datos.mesa);
+    const capacidadPrincipal = capacidadMesaPrincipal;
 
     // Validar combinación de mesas
     let mesasCombinadas = null;
@@ -252,7 +244,7 @@ export default function ModalReserva({ datos, onClose, onSave }) {
                   Selecciona las mesas a combinar
                 </h3>
                 <p className="text-sm text-gray-700">
-                  <strong className="text-orange-600">Mesa principal: {datos.mesa}</strong> (capacidad: {obtenerCapacidadMesa(datos.mesa)} personas)
+                  <strong className="text-orange-600">Mesa principal: {datos.mesa}</strong> (capacidad: {capacidadMesaPrincipal} personas)
                 </p>
               </div>
 
