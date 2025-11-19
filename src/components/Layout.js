@@ -35,13 +35,10 @@ export default function Layout({ children }) {
                 key={tab.path}
                 href={tab.path}
                 prefetch={true}
+                className={`tab ${isActive(tab.path) ? 'tab-active' : ''}`}
               >
-                <button
-                  className={`tab ${isActive(tab.path) ? 'tab-active' : ''}`}
-                >
-                  <span className="mr-2">{tab.icon}</span>
-                  {tab.name}
-                </button>
+                <span className="mr-2">{tab.icon}</span>
+                {tab.name}
               </Link>
             ))}
           </div>
