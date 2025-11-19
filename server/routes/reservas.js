@@ -8,17 +8,10 @@ router.get('/', async (req, res) => {
   try {
     const { fecha, turno, estado } = req.query;
 
+    // Optimización: Sin JOIN innecesario, solo campos necesarios
     let query = supabase
       .from('reservas')
-      .select(`
-        *,
-        clientes (
-          id,
-          nombre,
-          telefono,
-          clasificacion
-        )
-      `)
+      .select('id, fecha, turno, hora, mesa, mesas_combinadas, nombre_cliente, telefono_cliente, pax, notas, estado')
       .order('fecha', { ascending: true })
       .order('hora', { ascending: true });
 
@@ -271,6 +264,44 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Reserva eliminada correctamente' });
   } catch (error) {
     console.error('Error al eliminar reserva:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== OBTENER MESAS OCUPADAS (OPTIMIZADO) =====
+// GET /api/reservas/disponibilidad/mesas-ocupadas?fecha=YYYY-MM-DD&turno=comida&hora=13:00
+router.get('/disponibilidad/mesas-ocupadas', async (req, res) => {
+  try {
+    const { fecha, turno, hora } = req.query;
+
+    if (!fecha || !turno || !hora) {
+      return res.status(400).json({ error: 'Faltan parámetros requeridos' });
+    }
+
+    // Query ultra optimizado: solo trae mesa y mesas_combinadas
+    const { data, error } = await supabase
+      .from('reservas')
+      .select('mesa, mesas_combinadas')
+      .eq('fecha', fecha)
+      .eq('turno', turno)
+      .eq('hora', hora)
+      .in('estado', ['confirmada', 'completada']);
+
+    if (error) throw error;
+
+    // Construir set de mesas ocupadas
+    const mesasOcupadas = new Set();
+    data.forEach(r => {
+      mesasOcupadas.add(r.mesa);
+      if (r.mesas_combinadas) {
+        const mesas = JSON.parse(r.mesas_combinadas);
+        mesas.forEach(m => mesasOcupadas.add(m));
+      }
+    });
+
+    res.json({ mesasOcupadas: Array.from(mesasOcupadas) });
+  } catch (error) {
+    console.error('Error al obtener mesas ocupadas:', error);
     res.status(500).json({ error: error.message });
   }
 });

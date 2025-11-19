@@ -22,28 +22,17 @@ export default function ModalReserva({ datos, onClose, onSave }) {
 
   async function cargarMesasDisponibles() {
     try {
-      const todasReservas = await reservasAPI.getAll({
-        fecha: datos.fecha,
-        turno: datos.turno
-      });
-
-      const mesasOcupadas = new Set();
-      todasReservas.forEach(r => {
-        if (r.hora === datos.hora) {
-          mesasOcupadas.add(r.mesa);
-          if (r.mesas_combinadas) {
-            const mesas = typeof r.mesas_combinadas === 'string'
-              ? JSON.parse(r.mesas_combinadas)
-              : r.mesas_combinadas;
-            mesas.forEach(m => mesasOcupadas.add(m));
-          }
-        }
-      });
+      // Endpoint optimizado: solo trae mesas ocupadas, no todos los datos
+      const { mesasOcupadas } = await reservasAPI.getMesasOcupadas(
+        datos.fecha,
+        datos.turno,
+        datos.hora
+      );
 
       const disponibles = [];
       for (let i = 1; i <= MESAS_TOTALES; i++) {
         const mesa = `M${i}`;
-        if (mesa !== datos.mesa && !mesasOcupadas.has(mesa)) {
+        if (mesa !== datos.mesa && !mesasOcupadas.includes(mesa)) {
           disponibles.push(mesa);
         }
       }

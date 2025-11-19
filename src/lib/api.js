@@ -87,6 +87,14 @@ export const reservasAPI = {
       method: 'DELETE',
     });
   },
+
+  /**
+   * Obtener mesas ocupadas (optimizado)
+   */
+  async getMesasOcupadas(fecha, turno, hora) {
+    const params = new URLSearchParams({ fecha, turno, hora });
+    return fetchAPI(`/api/reservas/disponibilidad/mesas-ocupadas?${params}`);
+  },
 };
 
 // ===== CLIENTES =====
