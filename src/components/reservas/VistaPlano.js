@@ -1,37 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import dynamic from 'next/dynamic';
+import useSWR from 'swr';
 import { reservasAPI, mesasAPI } from '@/lib/api';
 import { obtenerFechaHoy, obtenerTipoMesa } from '@/lib/utils';
-import ModalReserva from './ModalReserva';
-import ModalInfoReserva from './ModalInfoReserva';
+
+// Lazy loading de modales para reducir bundle inicial
+const ModalReserva = dynamic(() => import('./ModalReserva'), {
+  loading: () => <div className="modal-overlay"><div className="spinner"></div></div>
+});
+const ModalInfoReserva = dynamic(() => import('./ModalInfoReserva'), {
+  loading: () => <div className="modal-overlay"><div className="spinner"></div></div>
+});
 
 export default function VistaPlano() {
   const [fecha, setFecha] = useState(obtenerFechaHoy());
   const [turno, setTurno] = useState('comida');
-  const [reservas, setReservas] = useState([]);
-  const [posiciones, setPosiciones] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [modalReserva, setModalReserva] = useState(null);
   const [modalInfo, setModalInfo] = useState(null);
 
-  useEffect(() => {
-    cargarDatos();
-  }, [fecha, turno]);
-
-  async function cargarDatos() {
-    setLoading(true);
-    try {
-      const [reservasData, posicionesData] = await Promise.all([
-        reservasAPI.getAll({ fecha, turno }),
-        mesasAPI.getAll()
-      ]);
-      setReservas(reservasData);
-      setPosiciones(posicionesData);
-    } catch (error) {
-      console.error('Error al cargar datos:', error);
-    } finally {
-      setLoading(false);
+  // SWR para reservas con caché automático
+  const { data: reservas = [], isLoading: loadingReservas, mutate: mutateReservas } = useSWR(
+    `/reservas?fecha=${fecha}&turno=${turno}`,
+    () => reservasAPI.getAll({ fecha, turno }),
+    {
+      refreshInterval: 30000,
+      revalidateOnFocus: true,
+      dedupingInterval: 5000
     }
-  }
+  );
+
+  // SWR para posiciones de mesas (raramente cambia)
+  const { data: posiciones = [], isLoading: loadingPosiciones } = useSWR(
+    '/mesas/posiciones',
+    () => mesasAPI.getAll(),
+    {
+      revalidateOnFocus: false, // No revalidar, los datos son estáticos
+      revalidateOnReconnect: false
+    }
+  );
+
+  const loading = loadingReservas || loadingPosiciones;
 
   function obtenerEstadoMesa(mesa) {
     const reserva = reservas.find(r => {
@@ -223,7 +231,7 @@ export default function VistaPlano() {
           onClose={() => setModalReserva(null)}
           onSave={() => {
             setModalReserva(null);
-            cargarDatos();
+            mutateReservas(); // Revalida caché de SWR
           }}
         />
       )}
@@ -232,7 +240,7 @@ export default function VistaPlano() {
         <ModalInfoReserva
           reserva={modalInfo}
           onClose={() => setModalInfo(null)}
-          onUpdate={cargarDatos}
+          onUpdate={() => mutateReservas()} // Revalida caché de SWR
         />
       )}
     </div>

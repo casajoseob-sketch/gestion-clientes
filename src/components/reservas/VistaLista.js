@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import useSWR from 'swr';
 import { reservasAPI } from '@/lib/api';
 import { MESAS_TOTALES } from '@/lib/constants';
 import {
@@ -7,12 +9,14 @@ import {
   formatearFechaHumana,
   obtenerEstadoConColor
 } from '@/lib/utils';
-import ModalInfoReserva from './ModalInfoReserva';
+
+// Lazy loading de modal para reducir bundle inicial
+const ModalInfoReserva = dynamic(() => import('./ModalInfoReserva'), {
+  loading: () => <div className="modal-overlay"><div className="spinner"></div></div>
+});
 
 export default function VistaLista() {
-  const [reservas, setReservas] = useState([]);
   const [reservasFiltradas, setReservasFiltradas] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState({
     buscar: '',
     fecha: '',
@@ -20,25 +24,20 @@ export default function VistaLista() {
   });
   const [modalInfo, setModalInfo] = useState(null);
 
-  useEffect(() => {
-    cargarReservas();
-  }, []);
+  // SWR para caché automático de todas las reservas
+  const { data: reservas = [], isLoading: loading, mutate } = useSWR(
+    '/reservas/all',
+    () => reservasAPI.getAll(),
+    {
+      refreshInterval: 30000,
+      revalidateOnFocus: true,
+      dedupingInterval: 5000
+    }
+  );
 
   useEffect(() => {
     aplicarFiltros();
   }, [filtros, reservas]);
-
-  async function cargarReservas() {
-    setLoading(true);
-    try {
-      const data = await reservasAPI.getAll();
-      setReservas(data);
-    } catch (error) {
-      console.error('Error al cargar reservas:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function aplicarFiltros() {
     let filtradas = [...reservas];
@@ -92,7 +91,7 @@ export default function VistaLista() {
 
     try {
       await reservasAPI.delete(id);
-      cargarReservas();
+      mutate(); // Revalida caché de SWR
       mostrarToast('🗑️ Reserva eliminada correctamente', 'success');
     } catch (error) {
       mostrarToast('Error al eliminar la reserva', 'error');
@@ -278,7 +277,7 @@ export default function VistaLista() {
           onClose={() => setModalInfo(null)}
           onUpdate={() => {
             setModalInfo(null);
-            cargarReservas();
+            mutate(); // Revalida caché de SWR
           }}
         />
       )}

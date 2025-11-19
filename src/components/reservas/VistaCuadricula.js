@@ -1,32 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import dynamic from 'next/dynamic';
+import useSWR from 'swr';
 import { reservasAPI } from '@/lib/api';
 import { HORARIOS_COMIDA, HORARIOS_CENA, MESAS_TOTALES } from '@/lib/constants';
 import { obtenerFechaHoy, obtenerEmojiTurno } from '@/lib/utils';
-import ModalReserva from './ModalReserva';
-import ModalInfoReserva from './ModalInfoReserva';
+
+// Lazy loading de modales para reducir bundle inicial
+const ModalReserva = dynamic(() => import('./ModalReserva'), {
+  loading: () => <div className="modal-overlay"><div className="spinner"></div></div>
+});
+const ModalInfoReserva = dynamic(() => import('./ModalInfoReserva'), {
+  loading: () => <div className="modal-overlay"><div className="spinner"></div></div>
+});
 
 export default function VistaCuadricula() {
   const [fecha, setFecha] = useState(obtenerFechaHoy());
-  const [reservas, setReservas] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [modalReserva, setModalReserva] = useState(null);
   const [modalInfo, setModalInfo] = useState(null);
 
-  useEffect(() => {
-    cargarReservas();
-  }, [fecha]);
-
-  async function cargarReservas() {
-    setLoading(true);
-    try {
-      const data = await reservasAPI.getAll({ fecha });
-      setReservas(data);
-    } catch (error) {
-      console.error('Error al cargar reservas:', error);
-    } finally {
-      setLoading(false);
+  // SWR para caché automático y revalidación
+  const { data: reservas = [], isLoading: loading, mutate } = useSWR(
+    `/reservas?fecha=${fecha}`,
+    () => reservasAPI.getAll({ fecha }),
+    {
+      refreshInterval: 30000, // Actualiza cada 30 segundos
+      revalidateOnFocus: true, // Revalida al volver a la pestaña
+      dedupingInterval: 5000   // Evita requests duplicados en 5s
     }
-  }
+  );
 
   function obtenerReserva(turno, hora, mesa) {
     return reservas.find(r => {
@@ -199,7 +200,7 @@ export default function VistaCuadricula() {
           onClose={() => setModalReserva(null)}
           onSave={() => {
             setModalReserva(null);
-            cargarReservas();
+            mutate(); // Revalida caché de SWR
           }}
         />
       )}
@@ -208,7 +209,7 @@ export default function VistaCuadricula() {
         <ModalInfoReserva
           reserva={modalInfo}
           onClose={() => setModalInfo(null)}
-          onUpdate={cargarReservas}
+          onUpdate={() => mutate()} // Revalida caché de SWR
         />
       )}
     </div>
